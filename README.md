@@ -192,12 +192,228 @@ Walking_Skeleton 모델을 선택한 이후, C++로 만들어둔 MainAnimInstnac
 
 결과 노드에 재생될 애니메이션 시퀀스 혹은 블렌드 스페이스 등을 연결해준다. 이 때, 기존에 생성한 변수인 Speed를 불러올 수 있다.
 
+<img width="1338" height="784" alt="Image" src="https://github.com/user-attachments/assets/d93520d8-d3f3-4d1e-8122-908c1bf20e94" />
+
 만들어둔 애니메이션을 적용시키기 위하여, “BP_Player”를 열어준 이후, 디테일 탭에서 애님 클래스를 위에서 작성한 ABP_Player로 변경하면 애니메이션이 적용된다.
 
 >## 게임 UI
 
-### Widget Blueprint 
+### **Widget Blueprint** 
 
+**Widget Blueprint**는 언리얼 엔진에서 **UI(User Interface)를 시각적으로 설계하고 구현**하는 도구로,
+
+이를 사용해 **버튼, 슬라이더, 텍스트**와 같은 다양한 위젯을 조합하여 게임의 인터페이스를 만드는 것이 가능하다.
+
+또한, **UI 요소와 게임 로직을 연결**해 사용자 입력에 반응하거나 데이터를 표시하는 등 **동적인 UI**를 구현할 수 있다.
+
+>### **Widget Blueprint의 특징과 활용**
+
+1. **시각적 UI 설계 도구**
+    - **Widget Blueprint**는 드래그 앤 드롭 방식으로 UI를 손쉽게 설계할 수 있는 도구이다.
+    - **버튼, 텍스트, 슬라이더, 이미지** 등 다양한 위젯을 제공하며, 이를 조합해 **메뉴, HUD, 인벤토리 시스템** 등을 제작할 수 있다.
+2. **Blueprint Event Graph를 통한 로직 구현**
+    - Widget Blueprint는 이벤트 그래프를 통해 **게임 로직과 UI 상호작용**을 구현할 수 있다.
+    - 예를 들어, 버튼 클릭 시 게임을 일시정지하거나, 체력 수치를 텍스트로 표시할 수 있다.
+3. **데이터 바인딩**
+    - Widget Blueprint는 **데이터 바인딩**을 통해 실시간으로 UI를 갱신하는 것이 가능하다. 게임 내 값(예: 플레이어 체력)이 변경될 때 UI도 자동으로 업데이트할 수 있다.
+
+>### **Widget Blueprint  화면구성**
+
+**위젯 구성 요소 추가**
+
+- **Canvas Panel**: UI 요소를 배치할 수 있는 기본 패널, 다른 위젯을 이 패널에 배치한다.
+- **버튼, 텍스트, 이미지 등 추가**: 다양한 위젯을 드래그해 **Canvas Panel**에 배치할 수 있다.
+
+
+>### **기본적인 게임 UI 만들기**
+
+1. **C++ Widget Class 생성** : 상단 툴 → 새로운 C++ 클래스 선택,  [ 모든 클래스 ] 를 선택 한 뒤, UserWidget을 부모 클래스로 선택한 다음, “MainHud”로 이름을 설정 한 뒤, 클래스를 생성해준다.
+
+**MainHud.h**
+
+```cpp
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Blueprint/UserWidget.h"
+#include "MainHud.generated.h"
+
+UCLASS()
+class BASIS_API UMainHud : public UUserWidget
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UProgressBar> HPGauge;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UTextBlock> HPPercent;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UTextBlock> KC;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UTextBlock> SC;
+
+	UFUNCTION()
+	void SetHP(float Value);
+
+	UFUNCTION()
+	void SetKillCount(int32 Value);	
+
+	UFUNCTION()
+	void SetStageCount(int32 Value);
+};
+
+
+```
+
+- 변수 위에 UPROPERTY(meta = (BindWidget)) meta 선언 시, **UI 상에 변수명과 동일한 위젯이 존재하는 경우, 자동으로 바인딩 해준다**
+
+**MainHud.cpp**
+
+```cpp
+
+#include "MainHud.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
+
+void UMainHud::SetHP(float Value)
+{
+	if(IsValid(HPGauge))
+	{
+		HPGauge->SetPercent(Value);
+	}
+	if(IsValid(HPPercent))
+	{
+		int32 Hp = Value * 100;
+		FText Text = FText::FromString(FString::Printf(TEXT("%d"), Hp));
+		HPPercent->SetText(Text);
+	}
+
+}
+
+void UMainHud::SetKillCount(int32 Value)
+{
+	if(IsValid(KC))
+	{
+		FText Text = FText::FromString(FString::Printf(TEXT("KillCount: %d"), Value));
+		KC->SetText(Text);
+	}
+}
+
+void UMainHud::SetStageCount(int32 Value)
+{
+	if (IsValid(SC))
+	{
+		FText Text = FText::FromString(FString::Printf(TEXT("Stage: %d"), Value));
+		SC->SetText(Text);
+	}
+}
+
+
+```
+2. 콘텐츠 브라우저에서 **마우스 우클릭** 후 **블루프린트 -> 블루프린트 클래스를** 선택한 이후, 방금 생성한 “MainHud”를 부모 클래스로 선택하여 MainHud Blueprint를 생성한다.
+- 이 “MainHud”를 플레이어 화면에 띄우기 위해 GameMode를 만들어 게임이 시작될 때 MainHud를 불러오고 실시간으로 업데이트 해준다.
+   
+3. **C++ GameMode 생성** : 상단 툴 → 새로운 C++ 클래스 선택,  [ 모든 클래스 ] 를 선택 한 뒤, GameMode를 부모 클래스로 선택한 다음, “MainHud”로 이름을 설정 한 뒤, 클래스를 생성해준다.
+
+ **MainGameMode.h**
+
+```cpp
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/GameMode.h"
+#include "MainGameMode.generated.h"
+
+UCLASS()
+class BASIS_API AMainGameMode : public AGameMode
+{
+	GENERATED_BODY()
+public:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+
+	UPROPERTY(EditAnyWhere)
+	TSubclassOf<class UUserWidget> WidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<class UUserWidget> Widget;
+
+	int32 Stage;
+	int32 KillCount;
+	float HP;
+};
+
+
+```
+
+**MainGameMode.h**
+
+```cpp
+
+#include "MainGameMode.h"
+#include "Blueprint/UserWidget.h"
+#include "PlayerBase.h"
+#include "MainHud.h"
+
+void AMainGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+	if (IsValid(WidgetClass))
+	{
+		Widget = CreateWidget<UUserWidget>(GetWorld(), WidgetClass);
+	}
+	if (Widget)
+	{
+		Widget->AddToViewport();
+	}
+	Stage = 0;
+}
+
+void AMainGameMode::Tick(float DeltaSeconds)
+{
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+	APlayerController* PC = World->GetFirstPlayerController();
+	if (!IsValid(PC))
+	{
+		return;
+	}
+	APlayerBase* PB = Cast<APlayerBase>(PC->GetPawn());
+	if (!IsValid(PB))
+	{
+		return;
+	}
+
+	HP = (float)(PB->CurrentHP) / PB->FullHP;
+
+	KillCount = PB->KillCount;
+
+	UMainHud* Hud = Cast<UMainHud>(Widget);
+
+	if(!IsValid(Hud))
+	{
+		return;
+	}
+
+	Hud->SetHP(HP);
+	Hud->SetKillCount(KillCount);
+	Hud->SetStageCount(Stage);
+}
+
+```
+
+4. 콘텐츠 브라우저에서 **마우스 우클릭** 후 **블루프린트 -> 블루프린트 클래스를** 선택한 이후, 방금 생성한 “MainGameMode”을 부모 클래스로 선택하여 GameMode Blueprint를 생성한다.
+
+5. GameMode Blueprint에서 Widget Class에 방금 만든 MainHud Blueprint를 넣고, 저장한다.
+6. 프로젝트 설정에서 MainGameMode Blueprint를 기본 게임모드를 설정하면 게임 플레이시 MainHud가 정상적으로 작동하게 된다.
+ 
 ## 3. 내일 학습 할 것은 무엇인지
 
 쉽게 배우는 C++ 언리얼 엔진 3D 게임 개발 기초 4주차의 AI 만들기와 기존 블루 프린트 노드 작업을 
